@@ -1,20 +1,93 @@
 <template>
-  <h1>Microphones can be used not only to pick up sound, but also to project sound similar to a speaker.</h1>
+  <ScoreBoard :winCount="this.winCount" :loseCount="this.loseCount"/>
 
-  <input type="radio" name="options" value="true">
-  <label>True</label><br>
+  <template v-if="this.question">
+    <h1 v-html="this.question"></h1>
 
-  <input type="radio" name="options" value="false">
-  <label>False</label><br>
+    <template v-for="(answer, index) in this.answers" :key="index">
+      <input type="radio" name="options" :value="answer" v-model="this.chosenAnswer" :disabled="this.answerSubmitted">
+      <label v-html="answer"></label><br>
+    </template>
 
-  <button type="button" class="send">Send</button>
+    <button v-if="!this.answerSubmitted" @click="this.subtmitAnswer" type="button" class="send">Send</button>
 
+    <section v-if="this.answerSubmitted" class="result">
+      <h4 v-if="this.chosenAnswer == this.correctAnswer" v-html="'&#9989; Congratulations, the answer ' + this.correctAnswer +' is correct.'"></h4>
+
+      <h4 v-else v-html="'&#10060; I´m sorry, you picked the wrong answer. The correct is ' + this.correctAnswer"></h4>
+      <button @click="this.getNewQuestion()" class="send" type="button">Next question</button>
+    </section>
+  </template>
 </template>
 
 <script>
+import ScoreBoard from './components/ScoreBoard.vue';
+
+const API = 'https://opentdb.com/api.php?amount=1&category=31';
 
 export default {
   name: 'App',
+
+  components: {
+    ScoreBoard
+  },
+
+  data() {
+    return {
+      question: undefined,
+      incorrectAnswers: undefined,
+      correctAnswer: undefined,
+      chosenAnswer: undefined,
+      answerSubmitted: false,
+      winCount: 0,
+      loseCount: 0
+    }
+  },
+
+  computed: {
+    answers() {
+      let answers = [...this.incorrectAnswers];
+
+      answers.splice(Math.round(Math.random() * answers.length), 0, this.correctAnswer);
+
+      return answers;
+    }
+  },
+
+  methods: {
+    subtmitAnswer() {
+      if (!this.chosenAnswer) {
+        alert('Pick one of the options');
+      } else {
+        this.answerSubmitted = true;
+
+        if (this.chosenAnswer == this.correctAnswer) {
+          this.winCount++;
+        } else {
+          this.loseCount++;
+        }
+      }
+    },
+
+    getNewQuestion() {
+      this.answerSubmitted = false;
+      this.chosenAnswer = undefined;
+      this.question = undefined;
+
+      this.axios
+      .get(API)
+      .then((res) => {
+        this.question = res.data.results[0].question;
+        this.incorrectAnswers = res.data.results[0].incorrect_answers;
+        this.correctAnswer = res.data.results[0].correct_answer;
+      })
+      .catch(error => console.error(error));
+    }
+  },
+
+  created() {
+    this.getNewQuestion();
+  }
 }
 </script>
 
@@ -30,6 +103,13 @@ export default {
 
   input {
     margin: 12px 4px;
+  }
+
+  label {
+    display: inline-block;
+    text-align: left;
+    width: 200px;
+    margin: 0 auto;
   }
 
   button.send {
